@@ -73,7 +73,7 @@ if (-not (Get-Command bash -ErrorAction SilentlyContinue)) {
     if ($winget) {
         Write-Host "Installing Git for Windows via winget, please wait..." -ForegroundColor Yellow
         # Install Git, accepting source agreements and running silently
-        winget install --id Git.Git --exact --silent --accept-source-agreements --accept-package-agreements
+        winget install --id Git.Git --exact --silent --accept-source-agreements --accept-pakage-agreements
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "Git installed successfully! Note: You may need to restart your terminal for PATH changes to take effect." -ForegroundColor Green
